@@ -25,7 +25,8 @@ initial_extensions = [
     "cogs.Owner_Commands",
     "cogs.Comick_API",
     "cogs.API_Slash",
-    "cogs.Tracking"
+    "cogs.Tracking",
+    "cogs.Manual_Check"
 ]
 
 async def load_cogs():
@@ -43,7 +44,6 @@ async def load_cogs():
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user} ({bot.user.id})")
-
     await asyncio.sleep(2)
 
     print("\n[DEBUG] Commands loaded in tree:")
@@ -54,9 +54,18 @@ async def on_ready():
     guild = discord.Object(id=1432282882952527902)
 
     try:
-        # REMOVE copy_global_to() - it's bringing back old command definition   s
+        # Clear commands from Discord's side first
+        print("🔄 Clearing commands from Discord...")
+        bot.tree.clear_commands(guild=guild)
+        await bot.tree.sync(guild=guild)  # Sync the clear
+        
+        # Now copy global commands to guild
+        print("📋 Copying global commands to guild...")
+        bot.tree.copy_global_to(guild=guild)
+        
+        # Sync new commands
         synced = await bot.tree.sync(guild=guild)
-        print(f"✅ Synced {len(synced)} command(s) to guild")
+        print(f"✅ Synced {len(synced)} command(s) to guild {guild.id}")
     except Exception as e:
         print(f"⚠️ Failed to sync commands: {e}")
         traceback.print_exc()
@@ -64,7 +73,6 @@ async def on_ready():
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.reading, name="Novels")
     )
-
     print("✅ Bot is fully ready.\n")
 
 # ------------------------
@@ -75,5 +83,5 @@ async def main():
         await load_cogs()
         await bot.start(TOKEN)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+if __name__ == "__main__":  
+    asyncio.run(main())         
