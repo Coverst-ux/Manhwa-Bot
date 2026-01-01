@@ -58,6 +58,8 @@ async def on_ready():
     except Exception as e:
         print(f"⚠️ Failed to sync commands: {e}")
         traceback.print_exc()
+        
+        
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.reading, name="Novels")
     )
