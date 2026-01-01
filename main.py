@@ -51,25 +51,13 @@ async def on_ready():
         cog_name = cmd.binding.__class__.__name__ if cmd.binding else "None"
         print(f"  - /{cmd.name} (from {cog_name})")
 
-    guild = discord.Object(id=1432282882952527902)
-
     try:
-        # Clear commands from Discord's side first
-        print("🔄 Clearing commands from Discord...")
-        bot.tree.clear_commands(guild=guild)
-        await bot.tree.sync(guild=guild)  # Sync the clear
-        
-        # Now copy global commands to guild
-        print("📋 Copying global commands to guild...")
-        bot.tree.copy_global_to(guild=guild)
-        
-        # Sync new commands
-        synced = await bot.tree.sync(guild=guild)
-        print(f"✅ Synced {len(synced)} command(s) to guild {guild.id}")
+        print("🔄 Syncing commands globally...")
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} command(s) globally")
     except Exception as e:
         print(f"⚠️ Failed to sync commands: {e}")
         traceback.print_exc()
-
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.reading, name="Novels")
     )
