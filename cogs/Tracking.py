@@ -231,13 +231,22 @@ class AddManhwaComick(commands.Cog):
                 if not row:
                     await interaction.followup.send(f"❌ **{title}** not found in your list.")
                     return
-                link = row[0]
-                slug = link.split("/comic/")[1] if "/comic/" in link else None
+                
+                async with db.execute(
+                    "SELECT manhwa_slug FROM chapter_tracking WHERE user_id = ? AND manhwa_title = ?",
+                    (interaction.user.id, title)
+                ) as cursor:
+                    slug_row = await cursor.fetchone()
+                    slug = slug_row[0] if slug_row else None
+                
                 cursor = await db.execute("DELETE FROM manhwas WHERE title = ? AND user_id = ?", (title, interaction.user.id))
                 rows_deleted = cursor.rowcount
+                
                 if slug:
                     await db.execute("DELETE FROM chapter_tracking WHERE user_id = ? AND manhwa_slug = ?", (interaction.user.id, slug))
+                
                 await db.commit()
+            
             if rows_deleted == 0:
                 await interaction.followup.send(f"❌ **{title}** not found in your list.")
             else:
@@ -246,42 +255,6 @@ class AddManhwaComick(commands.Cog):
             print(f"[AddManhwaComick] Database delete failed: {e}")
             traceback.print_exc()
             await interaction.followup.send("❌ Failed to remove. Try again.")
-
-    @app_commands.command(name="remove_manhwa", description="Remove a manhwa from your list")
-async def remove_manhwa(self, interaction: discord.Interaction, title: str):
-    print(f"[AddManhwaComick] remove_manhwa called by {interaction.user} for: {title}")
-    await interaction.response.defer()
-    try:
-        async with aiosqlite.connect('manhwa.db') as db:
-            async with db.execute("SELECT link FROM manhwas WHERE title = ? AND user_id = ?", (title, interaction.user.id)) as cursor:
-                row = await cursor.fetchone()
-            if not row:
-                await interaction.followup.send(f"❌ **{title}** not found in your list.")
-                return
-            
-            async with db.execute(
-                "SELECT manhwa_slug FROM chapter_tracking WHERE user_id = ? AND manhwa_title = ?",
-                (interaction.user.id, title)
-            ) as cursor:
-                slug_row = await cursor.fetchone()
-                slug = slug_row[0] if slug_row else None
-            
-            cursor = await db.execute("DELETE FROM manhwas WHERE title = ? AND user_id = ?", (title, interaction.user.id))
-            rows_deleted = cursor.rowcount
-            
-            if slug:
-                await db.execute("DELETE FROM chapter_tracking WHERE user_id = ? AND manhwa_slug = ?", (interaction.user.id, slug))
-            
-            await db.commit()
-        
-        if rows_deleted == 0:
-            await interaction.followup.send(f"❌ **{title}** not found in your list.")
-        else:
-            await interaction.followup.send(f"🗑️ Removed **{title}** from your list!")
-    except Exception as e:
-        print(f"[AddManhwaComick] Database delete failed: {e}")
-        traceback.print_exc()
-        await interaction.followup.send("❌ Failed to remove. Try again.")
 
     # ============ BACKGROUND TASK ============
 
@@ -352,7 +325,6 @@ async def remove_manhwa(self, interaction: discord.Interaction, title: str):
         except Exception as e:
             print(f"[AddManhwaComick] Chapter check failed: {e}")
             traceback.print_exc()
-
 
 # setup function for load_extension
 async def setup(bot):
