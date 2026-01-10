@@ -23,7 +23,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ------------------------
 initial_extensions = [
     "cogs.Owner_Commands",
-    "cogs.Comick_API",
     "cogs.API_Slash",
     "cogs.Tracking",
     "cogs.Manual_Check"
