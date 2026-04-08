@@ -12,9 +12,11 @@ class ManualCheck(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.session = aiohttp.ClientSession()
         print("[ManualCheck] Cog initialized")
-
+    async def cog_load(self):
+        self.session = aiohttp.ClientSession() 
+        print("[ManualCheck] Session created")
+        
     async def cog_unload(self):
         await self.session.close()
         print("[ManualCheck] Session closed")
@@ -136,3 +138,4 @@ class ManualCheck(commands.Cog):
 async def setup(bot):
     await bot.add_cog(ManualCheck(bot))
     print("[ManualCheck] Cog added")
+    
