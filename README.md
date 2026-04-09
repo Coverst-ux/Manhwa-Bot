@@ -1,92 +1,83 @@
 # Manhwa Bot
-
 A Discord bot for searching, tracking, and managing your manhwa/manga reading list directly from Discord using the Comick API.
 
 ## Features
-
 - **Search Manhwa** - Find any manhwa using `/search`
-- **Track Series** - Add manhwa to your personal tracking list with `/add_manhwas`
+- **Track Series** - Add manhwa to your personal tracking list with `/add_manhwa`
 - **Automatic Notifications** - Get automatic DM alerts when new chapters release for tracked series
-- **Manage List** - View tracked series with `/list_manhwas` or remove them with `/remove_manhwas`
+- **Manage List** - View tracked series with `/list_manhwas` or remove them with `/remove_manhwa`
+- **Latest Chapter** - Check the latest chapter of any manhwa with `/latestchapter`
+- **Manual Check** - Manually check for updates with `/manual_check`
 - **Local Storage** - All data stored locally in SQLite (no cloud dependency)
 
 ## Prerequisites
-
-Before you start, you'll need:
-
-- Python 3.8 or higher
+- Python 3.10 or higher
 - A Discord bot token (create one at [Discord Developer Portal](https://discord.com/developers/applications))
 - A Discord server where you have permission to add bots
 
 ## Installation
 
 1. **Clone the repository**
-   ```bash
+```bash
    git clone https://github.com/Coverst-ux/Manhwa-Bot.git
    cd Manhwa-Bot
-   ```
+```
 
 2. **Install dependencies**
-   ```bash
+```bash
    pip install -r requirements.txt
-   ```
+```
 
 3. **Set up your bot token**
-   - Create a `.env` file in the project root
-   - Add your Discord bot token:
-     ```
-     DISCORD_TOKEN=your_bot_token_here
-     ```
+   - Create a `.env` file in the project root using `.env.example` as a template:
+      TOKEN=your_bot_token_here
 
 4. **Run the bot**
-   ```bash
+```bash
    python main.py
-   ```
-
-The bot should now be online in your Discord server.
+```
 
 ## Usage
 
-Once the bot is running, use these commands in Discord:
-
 | Command | Description |
 |---------|-------------|
-| `/search {query}` | Search for a manhwa by title |
-| `/add_manhwas {manhwa}` | Add a manhwa to your tracking list |
-| `/remove_manhwas {manhwa}` | Remove a manhwa from your tracking list |
-| `/list_manhwas` | View all manhwa you're currently tracking |
+| `/search {title}` | Search for a manhwa by title |
+| `/getdetails {title}` | Get detailed info about a manhwa |
+| `/latestchapter {title}` | Get the latest chapter of a manhwa |
+| `/add_manhwa {title}` | Add a manhwa to your tracking list |
+| `/remove_manhwa {title}` | Remove a manhwa from your tracking list |
+| `/list_manhwas` | View all manhwa you are currently tracking |
+| `/manual_check` | Manually check for new chapters across your list |
 
 ## Project Status
 
-**Current Features:**
-- ✅ Search functionality
+- ✅ Search with rich embeds and cover images
 - ✅ Manual tracking (add/remove/list)
-- ✅ Automatic chapter update notifications
+- ✅ Automatic chapter update notifications every 24 hours
+- ✅ Manual update check on demand
 - ✅ Local SQLite storage
 
-**Planned Features:**
-- 🔄 Rich embeds with cover images and series info
-- 🔄 Web dashboard for tracking (future)
+**Planned:**
+- 🔄 Web dashboard for tracking
 
-## Configuration
-
-The bot stores all data locally in SQLite. No additional configuration is required beyond setting your bot token.
+## Permissions Required
+The bot requires the following Discord permissions:
+- Send Messages
+- Embed Links
+- Direct Messages
 
 ## Troubleshooting
 
 **Bot not showing up in Discord?**
 - Verify your bot token is correct in the `.env` file
-- Ensure the bot has permission to send messages in your server
-- Check that the bot is actually invited to your server
+- Ensure the bot has been invited to your server with the correct permissions
 
 **Commands not working?**
-- Make sure you're using slash commands (start with `/`)
-- The bot needs "Send Messages" and "Embed Links" permissions
+- Slash commands may take up to 1 hour to appear globally after first launch
+- Ensure the bot has "Send Messages" and "Embed Links" permissions
 
-## Support
-
-If you encounter issues, check the code or open an issue on GitHub.
+**Not receiving DM notifications?**
+- Make sure your Discord privacy settings allow DMs from server members
 
 ## License
-
 This project is open source and available under the MIT License.
