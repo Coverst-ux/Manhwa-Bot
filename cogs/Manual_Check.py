@@ -47,7 +47,7 @@ class ManualCheck(commands.Cog):
 
         # Fallback: search by title
         search_url = f"{self.PROXY_BASE}/search"
-        data = await self.fetch_json(search_url, params={"query": title, "limit": 1})
+        data = await self.fetch_json(search_url, params={"q": title, "limit": 1})
         if data and "results" in data and len(data["results"]) > 0:
             new_slug = data["results"][0].get("slug")
             print(f"[ManualCheck] Resolved slug for '{title}' -> {new_slug}")
