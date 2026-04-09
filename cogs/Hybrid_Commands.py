@@ -165,16 +165,18 @@ class ComickSlash(commands.Cog):
             return
 
         ch = data[0]
+        chapter_url=ch.get("url")
         embed = discord.Embed(
             title=ch.get("title", "Latest Chapter"),
-            description=f"[Read here]({ch.get('url')})",
+            description=f"[Read here]({chapter_url})" if chapter_url else "No link available",
             color=0xe67e22
         )
 
         view = discord.ui.View()
-        view.add_item(discord.ui.Button(
-            label="📖 Read Chapter",
-            url=ch.get("url")
+        if chapter_url:
+            view.add_item(discord.ui.Button(
+                label="📖 Read Chapter",
+                url=chapter_url
         ))
 
         await self.send_embed(ctx, embed, view)
