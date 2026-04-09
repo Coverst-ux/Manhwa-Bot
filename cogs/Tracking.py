@@ -264,67 +264,66 @@ class AddManhwaComick(commands.Cog):
 
     async def _chapter_check_loop(self):
         print("[AddManhwaComick] Running chapter check...")
-        try:
-            user_updates = {}
-            async with aiosqlite.connect('manhwa.db') as db:
-                async with db.execute("SELECT user_id, manhwa_title, manhwa_slug, latest_chapter_notified FROM chapter_tracking") as cursor:
-                    rows = await cursor.fetchall()
+        async with aiosqlite.connect('manhwa.db') as db:
+            async with db.execute("SELECT user_id, manhwa_title, manhwa_slug, latest_chapter_notified FROM chapter_tracking") as cursor:
+                rows = await cursor.fetchall()
+            try:
+                user_updates = {}
 
-            print(f"[AddManhwaComick] Checking {len(rows)} tracked manhwas")
-            for user_id, manhwa_title, manhwa_slug, latest_notified in rows:
-                try:
-                    latest_info = await self.get_latest_chapter(manhwa_title, manhwa_slug)
-                    if not latest_info:
-                        continue
+                print(f"[AddManhwaComick] Checking {len(rows)} tracked manhwas")
+                for user_id, manhwa_title, manhwa_slug, latest_notified in rows:
+                    try:
+                        latest_info = await self.get_latest_chapter(manhwa_title, manhwa_slug)
+                        if not latest_info:
+                            continue
 
-                    latest_chapter_num = latest_info["chapter"]
-                    if latest_chapter_num > (latest_notified or 0):
-                        if user_id not in user_updates:
-                            user_updates[user_id] = []
-                        user_updates[user_id].append(latest_info)
+                        latest_chapter_num = latest_info["chapter"]
+                        if latest_chapter_num > (latest_notified or 0):
+                            if user_id not in user_updates:
+                                user_updates[user_id] = []
+                            user_updates[user_id].append(latest_info)
 
-                        # Update DB immediately
-                        async with aiosqlite.connect('manhwa.db') as db:
+                            # Update DB immediately
                             await db.execute(
                                 "UPDATE chapter_tracking SET latest_chapter_notified = ?, last_notified_time = CURRENT_TIMESTAMP WHERE user_id = ? AND manhwa_slug = ?",
                                 (latest_chapter_num, user_id, manhwa_slug)
-                            )
+                                )
                             await db.commit()
-                except Exception as e:
-                    print(f"[AddManhwaComick] Error checking {manhwa_title}: {e}")
-                    traceback.print_exc()
+                    except Exception as e:
+                        print(f"[AddManhwaComick] Error checking {manhwa_title}: {e}")
+                        traceback.print_exc()
 
-            # Send DMs
-            print(f"[AddManhwaComick] Sending updates to {len(user_updates)} users")
-            for uid, updates in user_updates.items():
-                try:
-                    user = await self.bot.fetch_user(uid)
-                    embed = discord.Embed(
-                        title="📚 Your Manhwas Have New Chapters!",
-                        description=f"**{len(updates)}** new chapter(s) since last check:",
-                        color=0x2b2d31
-                    )
-                    if updates and updates[0]['cover']:
-                        embed.set_image(url=updates[0]['cover'])
+                # Send DMs
+                print(f"[AddManhwaComick] Sending updates to {len(user_updates)} users")
+                for uid, updates in user_updates.items():
+                    try:
+                        user = await self.bot.fetch_user(uid)
+                        embed = discord.Embed(
+                            title="📚 Your Manhwas Have New Chapters!",
+                            description=f"**{len(updates)}** new chapter(s) since last check:",
+                            color=0x2b2d31
+                        )
+                        if updates and updates[0]['cover']:
+                            embed.set_image(url=updates[0]['cover'])
 
-                    for update in updates:
-                        chapter_num = int(update['chapter']) if update['chapter'] == int(update['chapter']) else update['chapter']
-                        chapter_info = f"**Chapter {chapter_num}**"
-                        if update['chapter_title']:
-                            chapter_info += f"\n_{update['chapter_title']}_"
-                        chapter_info += f"\n[Read here]({update['link']})"
-                        embed.add_field(name=update['title'], value=chapter_info, inline=False)
+                        for update in updates:
+                            chapter_num = int(update['chapter']) if update['chapter'] == int(update['chapter']) else update['chapter']
+                            chapter_info = f"**Chapter {chapter_num}**"
+                            if update['chapter_title']:
+                                chapter_info += f"\n_{update['chapter_title']}_"
+                            chapter_info += f"\n[Read here]({update['link']})"
+                            embed.add_field(name=update['title'], value=chapter_info, inline=False)
 
-                    embed.set_footer(text="Powered by Comick")
-                    await user.send(embed=embed)
-                    await asyncio.sleep(1)
-                    print(f"[AddManhwaComick] Sent {len(updates)} updates to {uid}")
-                except Exception as e:
-                    print(f"[AddManhwaComick] Failed to send DM to {uid}: {e}")
-                    traceback.print_exc()
-        except Exception as e:
-            print(f"[AddManhwaComick] Chapter check failed: {e}")
-            traceback.print_exc()
+                        embed.set_footer(text="Powered by Comick")
+                        await user.send(embed=embed)
+                        await asyncio.sleep(1)
+                        print(f"[AddManhwaComick] Sent {len(updates)} updates to {uid}")
+                    except Exception as e:
+                        print(f"[AddManhwaComick] Failed to send DM to {uid}: {e}")
+                        traceback.print_exc()
+            except Exception as e:
+                print(f"[AddManhwaComick] Chapter check failed: {e}")
+                traceback.print_exc()
 
 # setup function for load_extension
 async def setup(bot):
