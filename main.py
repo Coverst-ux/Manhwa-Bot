@@ -3,15 +3,22 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 import asyncio
-import traceback
+import logging
 
 # ------------------------
 # Setup
 # ------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+)
+
+log = logging.getLogger(__name__)
+
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
-DEV_MODE = True  # ✅ Set to False when deploying globally
+DEV_MODE = True
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -32,37 +39,34 @@ async def load_cogs():
     for ext in initial_extensions:
         try:
             await bot.load_extension(ext)
-            print(f"✅ Loaded {ext}")
+            log.info("Loaded %s", ext)
         except Exception as e:
-            print(f"❌ Failed to load {ext}: {e}")
-            traceback.print_exc()
+            log.exception("Failed to load %s: %s", ext, e)
 
 # ------------------------
 # Events
 # ------------------------
 @bot.event
 async def on_ready():
-    print(f"✅ Logged in as {bot.user} ({bot.user.id})")
+    log.info("Logged in as %s (%s)", bot.user, bot.user.id)
     await asyncio.sleep(2)
 
-    print("\n[DEBUG] Commands loaded in tree:")
+    log.debug("Commands loaded in tree:")
     for cmd in bot.tree.get_commands():
         cog_name = cmd.binding.__class__.__name__ if cmd.binding else "None"
-        print(f"  - /{cmd.name} (from {cog_name})")
+        log.debug("  /%s (from %s)", cmd.name, cog_name)
 
     try:
-        print("🔄 Syncing commands globally...")
+        log.info("Syncing commands globally...")
         synced = await bot.tree.sync()
-        print(f"✅ Synced {len(synced)} command(s) globally")
+        log.info("Synced %d command(s) globally", len(synced))
     except Exception as e:
-        print(f"⚠️ Failed to sync commands: {e}")
-        traceback.print_exc()
-        
-        
+        log.exception("Failed to sync commands: %s", e)
+
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.reading, name="Novels")
     )
-    print("✅ Bot is fully ready.\n")
+    log.info("Bot is fully ready.")
 
 # ------------------------
 # Main
@@ -72,5 +76,5 @@ async def main():
         await load_cogs()
         await bot.start(TOKEN)
 
-if __name__ == "__main__":  
-    asyncio.run(main())         
+if __name__ == "__main__":
+    asyncio.run(main())
