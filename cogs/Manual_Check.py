@@ -4,7 +4,10 @@ from discord import app_commands
 from discord.ext import commands
 import aiosqlite
 import aiohttp
-import traceback
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class ManualCheck(commands.Cog):
     PROXY_BASE = "https://comick-api-proxy.notaspider.dev/v1.0"
@@ -12,14 +15,14 @@ class ManualCheck(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        print("[ManualCheck] Cog initialized")
+        log.info("Cog initialized")
     async def cog_load(self):
         self.session = aiohttp.ClientSession() 
-        print("[ManualCheck] Session created")
+        log.info("Session created")
         
     async def cog_unload(self):
         await self.session.close()
-        print("[ManualCheck] Session closed")
+        log.info("[ManualCheck] Session closed")
 
     async def fetch_json(self, url: str, params=None):
         try:
@@ -30,11 +33,11 @@ class ManualCheck(commands.Cog):
                 timeout=aiohttp.ClientTimeout(total=10)
             ) as response:
                 if response.status != 200:
-                    print(f"[ManualCheck] ❌ {response.status} for {url}")
+                    log.warning("HTTP %d for %s", response.status, url)
                     return None
                 return await response.json()
         except Exception as e:
-            print(f"[ManualCheck] ⚠️ Fetch error for {url}: {e}")
+            log.error("Fetch error for %s: %s", url, e)
             return None
 
     async def resolve_slug(self, title: str, current_slug: str):
@@ -50,17 +53,17 @@ class ManualCheck(commands.Cog):
         data = await self.fetch_json(search_url, params={"q": title, "limit": 1})
         if data and "results" in data and len(data["results"]) > 0:
             new_slug = data["results"][0].get("slug")
-            print(f"[ManualCheck] Resolved slug for '{title}' -> {new_slug}")
+            log.info("Resolved slug for %s -> %s", title, new_slug)
             return new_slug
 
-        print(f"[ManualCheck] ❌ Could not resolve slug for '{title}'")
+        log.warning("Could not resolve slug for '%s'", title)
         return None
 
     async def get_latest_chapter(self, slug: str):
         url = f"{self.PROXY_BASE}/comic/{slug}/chapters"
         data = await self.fetch_json(url, params={"limit": 1, "tachiyomi": "true"})
         if not data or "chapters" not in data or len(data["chapters"]) == 0:
-            print(f"[ManualCheck] ❌ No chapter data for slug '{slug}'")
+            log.error("No chapter data for slug %s", slug)
             return None
 
         chapter = data["chapters"][0]
@@ -88,7 +91,7 @@ class ManualCheck(commands.Cog):
                     return
 
                 for title, slug, last_notified in rows:
-                    print(f"[ManualCheck] Checking {title} ({slug})...")
+                    log.info("Checking (%s) (%s)", title, slug)
 
                     # Resolve slug first
                     resolved_slug = await self.resolve_slug(title, slug)
@@ -131,11 +134,9 @@ class ManualCheck(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
         except Exception as e:
-            print("[ManualCheck] Error during manual check:", e)
-            traceback.print_exc()
+            log.exception("Error during manual check")
             await interaction.followup.send("⚠️ Failed to check updates. See logs.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(ManualCheck(bot))
-    print("[ManualCheck] Cog added")
-    
+    log.info("Cog added")    
