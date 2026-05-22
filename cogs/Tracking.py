@@ -9,6 +9,9 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
+
+    
+
 class AddManhwaComick(commands.Cog):
     BASE_URL = "https://comick-api-proxy.notaspider.dev/api"
     WEB_BASE = "https://comick.dev"
@@ -19,6 +22,16 @@ class AddManhwaComick(commands.Cog):
         self._chapter_check_task = None
         self.session = None
         log.info("Cog initialized")
+    
+    @staticmethod
+    def format_chapter_number(chapter: float) -> str:
+        """Format chapter number: show as int if whole, else as float."""
+        try:
+            if chapter == int(chapter):
+                return str(int(chapter))
+            return str(chapter)
+        except (ValueError, TypeError):
+            return str(chapter)
 
     async def cog_load(self):
         """runs when cog is loaded by discord.py; start tasks here."""
@@ -304,7 +317,7 @@ class AddManhwaComick(commands.Cog):
                             embed.set_image(url=updates[0]['cover'])
 
                         for update in updates:
-                            chapter_num = int(update['chapter']) if update['chapter'] == int(update['chapter']) else update['chapter']
+                            chapter_num = self.format_chapter_number(update['chapter'])
                             chapter_info = f"**Chapter {chapter_num}**"
                             if update['chapter_title']:
                                 chapter_info += f"\n_{update['chapter_title']}_"
