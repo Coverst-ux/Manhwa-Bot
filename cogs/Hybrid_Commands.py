@@ -2,6 +2,9 @@ import discord
 from discord.ext import commands
 import aiohttp
 import asyncio
+import logging
+
+log = logging.getLogger(__name__)
 
 class ComickSlash(commands.Cog):
     BASE_URL = "https://comick-api-proxy.notaspider.dev/api"
@@ -14,10 +17,12 @@ class ComickSlash(commands.Cog):
 
     async def cog_load(self):
         self.session = aiohttp.ClientSession(timeout=self.TIMEOUT)
+        log.info("Session created")
 
     async def cog_unload(self):
         if self.session:
             await self.session.close()
+            log.info("Session closed")
 
     # ---------------- Utility ----------------
     async def fetch_json(self, url, params=None):
@@ -27,8 +32,9 @@ class ComickSlash(commands.Cog):
             async with self.session.get(url, params=params) as resp:
                 if resp.status == 200:
                     return await resp.json()
-        except Exception:
-            pass
+                log.warning("HTTP %d for %s", resp.status, url)
+        except Exception as e:
+            log.error("Fetch error for %s: %s", url, e)
         return None
 
     async def search_slug(self, title: str):
@@ -42,6 +48,7 @@ class ComickSlash(commands.Cog):
         )
 
         if not data:
+            log.warning("No results for: %s", title)
             return None, None
 
         top = data[0]
@@ -56,14 +63,15 @@ class ComickSlash(commands.Cog):
                     await ctx_or_interaction.response.send_message(embed=embed, view=view)
                 else:
                     await ctx_or_interaction.followup.send(embed=embed, view=view)
-        except Exception:
+        except Exception as e:
+            log.error("Failed to send embed: %s", e)
             try:
                 if isinstance(ctx_or_interaction, commands.Context):
                     await ctx_or_interaction.send("⚠️ Failed to send message.")
                 else:
                     await ctx_or_interaction.followup.send("⚠️ Failed to send message.")
-            except Exception:
-                pass
+            except Exception as e:
+                log.error("Failed to send fallback message: %s", e)
 
     # ---------------- Commands ----------------
     @commands.hybrid_command(name="search", description="Search for a manga/manhwa by title")
@@ -158,6 +166,11 @@ class ComickSlash(commands.Cog):
             params={"limit": 1, "tachiyomi": "true"}
         )
 
+        if not chapters:
+            msg = "⚠️ Could not fetch chapters."
+            await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
+            return
+
         data = chapters.get("chapters") or chapters.get("data") or []
         if not data:
             msg = "⚠️ No chapters found."
@@ -165,7 +178,7 @@ class ComickSlash(commands.Cog):
             return
 
         ch = data[0]
-        chapter_url=ch.get("url")
+        chapter_url = ch.get("url")
         embed = discord.Embed(
             title=ch.get("title", "Latest Chapter"),
             description=f"[Read here]({chapter_url})" if chapter_url else "No link available",
@@ -177,10 +190,11 @@ class ComickSlash(commands.Cog):
             view.add_item(discord.ui.Button(
                 label="📖 Read Chapter",
                 url=chapter_url
-        ))
+            ))
 
         await self.send_embed(ctx, embed, view)
 
 # ---------------- Setup ----------------
 async def setup(bot):
     await bot.add_cog(ComickSlash(bot))
+    log.info("Cog added")
