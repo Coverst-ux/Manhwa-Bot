@@ -64,7 +64,7 @@ async def on_ready():
         log.exception("Failed to sync commands: %s", e)
 
     await bot.change_presence(
-        activity=discord.Activity(type=discord.ActivityType.reading, name="Novels")
+        activity=discord.Activity(type=discord.ActivityType.watching, name="Novels")
     )
     log.info("Bot is fully ready.")
 

@@ -71,12 +71,14 @@ async def test_search_slug_returns_none_when_no_results(client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_latest_chapter_returns_chapter_info(client, monkeypatch):
+    requested_urls = []
     responses = [
-        {"comic": {"hid": "comic-hid", "cover_url": "cover.png"}},
+        [{"slug": "test-slug", "title": "Test Manhwa", "hid": "comic-hid", "cover_url": "cover.png"}],
         {"chapters": [{"chap": "15", "title": "The Fight", "hid": "chapter-hid"}]},
     ]
 
     async def fake_fetch_json(url, params=None):
+        requested_urls.append(url)
         return responses.pop(0)
 
     monkeypatch.setattr(client, "_fetch_json", fake_fetch_json)
@@ -91,6 +93,10 @@ async def test_get_latest_chapter_returns_chapter_info(client, monkeypatch):
         "link": "https://comick.dev/comic/test-slug/chapter/chapter-hid",
         "cover": "cover.png",
     }
+    assert requested_urls == [
+        "https://comick-api-proxy.notaspider.dev/api/v1.0/search",
+        "https://comick-api-proxy.notaspider.dev/api/comic/comic-hid/chapters",
+    ]
 
 
 @pytest.mark.asyncio
@@ -108,7 +114,7 @@ async def test_get_latest_chapter_returns_none_when_fetch_fails(client, monkeypa
 @pytest.mark.asyncio
 async def test_get_latest_chapter_returns_none_when_comic_has_no_hid(client, monkeypatch):
     async def fake_fetch_json(url, params=None):
-        return {"comic": {"cover_url": "cover.png"}}
+        return [{"slug": "test-slug", "title": "Test Manhwa", "cover_url": "cover.png"}]
 
     monkeypatch.setattr(client, "_fetch_json", fake_fetch_json)
 
@@ -120,7 +126,7 @@ async def test_get_latest_chapter_returns_none_when_comic_has_no_hid(client, mon
 @pytest.mark.asyncio
 async def test_get_latest_chapter_returns_none_when_chapters_are_empty(client, monkeypatch):
     responses = [
-        {"comic": {"hid": "comic-hid"}},
+        [{"slug": "test-slug", "title": "Test Manhwa", "hid": "comic-hid"}],
         {"chapters": []},
     ]
 
@@ -137,7 +143,7 @@ async def test_get_latest_chapter_returns_none_when_chapters_are_empty(client, m
 @pytest.mark.asyncio
 async def test_get_latest_chapter_handles_invalid_chapter_number_safely(client, monkeypatch):
     responses = [
-        {"comic": {"hid": "comic-hid"}},
+        [{"slug": "test-slug", "title": "Test Manhwa", "hid": "comic-hid"}],
         {"chapters": [{"chap": "extra", "title": "Side Story", "hid": "chapter-hid"}]},
     ]
 
@@ -161,8 +167,6 @@ async def test_get_latest_chapter_handles_invalid_chapter_number_safely(client, 
 @pytest.mark.asyncio
 async def test_get_latest_chapter_falls_back_to_search_when_slug_is_stale(client, monkeypatch):
     responses = [
-        None,
-        {"comic": {"hid": "new-comic-hid", "cover": "new-cover.png"}},
         {"chapters": [{"chap": "20", "title": "New Start", "hid": "new-chapter-hid"}]},
     ]
 
@@ -170,7 +174,7 @@ async def test_get_latest_chapter_falls_back_to_search_when_slug_is_stale(client
         return responses.pop(0)
 
     async def fake_search_slug(title):
-        return "new-slug", {"slug": "new-slug", "title": title}
+        return "new-slug", {"slug": "new-slug", "title": title, "hid": "new-comic-hid", "cover": "new-cover.png"}
 
     monkeypatch.setattr(client, "_fetch_json", fake_fetch_json)
     monkeypatch.setattr(client, "search_slug", fake_search_slug)

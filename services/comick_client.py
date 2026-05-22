@@ -24,48 +24,25 @@ class ComickClient:
         log.info(f"Found: {top.get('title', title)} (slug: {slug})")
         return slug, top
 
-    async def _get_comic_data(self, slug: str):
-        """
-        Fetch comic data by slug. Returns None if not found or invalid.
-        """
-        comic_url = f"{self.BASE_URL}/v1.0/comic/{slug}"
-        comic_data = await self._fetch_json(comic_url, params={"tachiyomi": "true"})
-
-        if not comic_data or "comic" not in comic_data:
-            return None
-
-        return comic_data
-
     async def get_latest_chapter(self, title: str, slug: str):
         """
         Returns the latest chapter info for a given manhwa title/slug.
         Resolves slug if needed.
         """
-        # Step 1: Try current slug
-        comic_data = await self._get_comic_data(slug)
+        resolved_slug, top = await self.search_slug(title)
+        if not resolved_slug or not top:
+            log.warning(f"Could not resolve slug for {title}")
+            return None
 
-        if not comic_data:
-            # Fallback: search by title
-            new_slug, top = await self.search_slug(title)
-            if not new_slug:
-                log.warning(f"Could not resolve slug for {title}")
-                return None
-            slug = new_slug
-            comic_data = await self._get_comic_data(slug)
-            if not comic_data:
-                log.warning(f"No comic data for {title} after resolving slug")
-                return None
-
-        comic_obj = comic_data["comic"]
-        hid = comic_obj.get("hid")
-        cover_url = comic_obj.get("cover_url") or comic_obj.get("cover")
+        slug = resolved_slug
+        hid = top.get("hid")
+        cover_url = top.get("cover_url") or top.get("cover")
 
         if not hid:
             log.warning(f"No hid found for {title}")
             return None
 
-        # Step 2: Fetch latest chapter by hid
-        chapters_url = f"{self.BASE_URL}/v1.0/comic/{hid}/chapters"
+        chapters_url = f"{self.BASE_URL}/comic/{hid}/chapters"
         chapters_data = await self._fetch_json(chapters_url, params={"limit": 1, "tachiyomi": "true"})
         if not chapters_data or "chapters" not in chapters_data or not chapters_data["chapters"]:
             log.warning(f"No chapters found for {title}")
