@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 class ComickClient:
     BASE_URL = "https://comick-api-proxy.notaspider.dev/api"
     WEB_BASE = "https://comick.dev"
+    HEADERS = {"User-Agent": "Tachiyomi/1.0"}
 
     def __init__(self, session):
         self.session = session
@@ -97,7 +98,7 @@ class ComickClient:
 
         for attempt in range(1, retries + 2):
             try:
-                async with self.session.get(url, params=params, timeout=timeout) as resp:
+                async with self.session.get(url, headers=self.HEADERS, params=params, timeout=timeout) as resp:
                     if resp.status != 200:
                         log.warning(f"API returned {resp.status} for {url} (attempt {attempt})")
                         if attempt <= retries:

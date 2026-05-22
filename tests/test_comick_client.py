@@ -8,6 +8,40 @@ def client():
     return ComickClient(session=None)
 
 
+class FakeResponse:
+    status = 200
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        return False
+
+    async def json(self):
+        return {"ok": True}
+
+
+class FakeSession:
+    def __init__(self):
+        self.request = None
+
+    def get(self, url, **kwargs):
+        self.request = {"url": url, **kwargs}
+        return FakeResponse()
+
+
+@pytest.mark.asyncio
+async def test_fetch_json_sends_tachiyomi_user_agent():
+    session = FakeSession()
+    client = ComickClient(session=session)
+
+    result = await client._fetch_json("https://example.test", params={"tachiyomi": "true"})
+
+    assert result == {"ok": True}
+    assert session.request["headers"] == {"User-Agent": "Tachiyomi/1.0"}
+    assert session.request["params"] == {"tachiyomi": "true"}
+
+
 @pytest.mark.asyncio
 async def test_search_slug_returns_top_result(client, monkeypatch):
     async def fake_fetch_json(url, params=None):
