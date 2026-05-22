@@ -4,8 +4,10 @@ import discord
 import asyncio
 import aiosqlite
 import aiohttp
-import traceback
+import logging
 from typing import Optional
+
+log = logging.getLogger(__name__)
 
 class AddManhwaComick(commands.Cog):
     BASE_URL = "https://comick-api-proxy.notaspider.dev/api"
@@ -16,11 +18,11 @@ class AddManhwaComick(commands.Cog):
         self.bot = bot
         self._chapter_check_task = None
         self.session = None
-        print("[AddManhwaComick] Cog initialized")
+        log.info("Cog initialized")
 
     async def cog_load(self):
         """runs when cog is loaded by discord.py; start tasks here."""
-        print("[AddManhwaComick] Cog loaded - initializing DB and starting task")
+        log.info("Cog loaded - initializing DB and starting task")
         self.session = aiohttp.ClientSession(timeout=self.TIMEOUT)
         await self.init_db()
         await self.init_chapter_tracking_db()
@@ -32,7 +34,7 @@ class AddManhwaComick(commands.Cog):
 
     async def cog_unload(self):
         """called when the cog is unloaded — stop background tasks cleanly."""
-        print("[AddManhwaComick] Unloading cog: stopping tasks")
+        log.info("Unloading cog: stopping tasks")
         if self._chapter_check_task and self._chapter_check_task.is_running():
             self._chapter_check_task.cancel()
         if self.session:
@@ -53,10 +55,9 @@ class AddManhwaComick(commands.Cog):
                     )
                 ''')
                 await db.commit()
-            print("[AddManhwaComick] Manhwas table initialized")
+            log.info("Manhwas table initialized")
         except Exception as e:
-            print(f"[AddManhwaComick] Manhwas table init failed: {e}")
-            traceback.print_exc()
+            log.error(f"Manhwas table init failed: {e}", exc_info=True)
 
     async def init_chapter_tracking_db(self):
         try:
@@ -73,10 +74,9 @@ class AddManhwaComick(commands.Cog):
                     )
                 ''')
                 await db.commit()
-            print("[AddManhwaComick] Chapter tracking table initialized")
+            log.info("Chapter tracking table initialized")
         except Exception as e:
-            print(f"[AddManhwaComick] Chapter tracking table init failed: {e}")
-            traceback.print_exc()
+            log.error(f"Chapter tracking table init failed: {e}", exc_info=True)
 
     # ============ UTILITIES ============
 
@@ -89,20 +89,20 @@ class AddManhwaComick(commands.Cog):
             try:
                 async with self.session.get(url, params=params) as resp:
                     if resp.status != 200:
-                        print(f"[AddManhwaComick] API returned {resp.status} for {url} (attempt {attempt})")
+                        log.warning(f"API returned {resp.status} for {url} (attempt {attempt})")
                         if attempt <= retries:
                             await asyncio.sleep(1)
                             continue
                         return None
                     return await resp.json()
             except asyncio.TimeoutError:
-                print(f"[AddManhwaComick] API request timeout for {url} (attempt {attempt})")
+                log.warning(f"API request timeout for {url} (attempt {attempt})")
                 if attempt <= retries:
                     await asyncio.sleep(1)
                     continue
                 return None
             except Exception as e:
-                print(f"[AddManhwaComick] Fetch error for {url} (attempt {attempt}): {e}")
+                log.error(f"Fetch error for {url} (attempt {attempt}): {e}", exc_info=True)
                 if attempt <= retries:
                     await asyncio.sleep(1)
                     continue
@@ -110,14 +110,14 @@ class AddManhwaComick(commands.Cog):
 
     async def search_slug(self, title: str):
         search_url = f"{self.BASE_URL}/v1.0/search"
-        print(f"[AddManhwaComick] Searching for: {title}")
+        log.info(f"Searching for: {title}")
         data = await self.fetch_json(search_url, params={"q": title, "tachiyomi": "true"})
         if not data:
-            print(f"[AddManhwaComick] No results for: {title}")
+            log.warning(f"No results for: {title}")
             return None, None
         top = data[0]
         slug = top.get("slug")
-        print(f"[AddManhwaComick] Found: {top.get('title', title)} (slug: {slug})")
+        log.info(f"Found: {top.get('title', title)} (slug: {slug})")
         return slug, top
 
     async def get_latest_chapter(self, title: str, slug: str):
@@ -133,12 +133,12 @@ class AddManhwaComick(commands.Cog):
             # Fallback: search by title
             new_slug, top = await self.search_slug(title)
             if not new_slug:
-                print(f"[AddManhwaComick] Could not resolve slug for {title}")
+                log.warning(f"Could not resolve slug for {title}")
                 return None
             slug = new_slug
             comic_data = await self.fetch_json(f"{self.BASE_URL}/v1.0/comic/{slug}", params={"tachiyomi": "true"})
             if not comic_data or "comic" not in comic_data:
-                print(f"[AddManhwaComick] No comic data for {title} after resolving slug")
+                log.warning(f"No comic data for {title} after resolving slug")
                 return None
 
         comic_obj = comic_data["comic"]
@@ -146,14 +146,14 @@ class AddManhwaComick(commands.Cog):
         cover_url = comic_obj.get("cover_url") or comic_obj.get("cover")
 
         if not hid:
-            print(f"[AddManhwaComick] No hid found for {title}")
+            log.warning(f"No hid found for {title}")
             return None
 
         # Step 2: Fetch latest chapter by hid
         chapters_url = f"{self.BASE_URL}/v1.0/comic/{hid}/chapters"
         chapters_data = await self.fetch_json(chapters_url, params={"limit": 1, "tachiyomi": "true"})
         if not chapters_data or "chapters" not in chapters_data or not chapters_data["chapters"]:
-            print(f"[AddManhwaComick] No chapters found for {title}")
+            log.warning(f"No chapters found for {title}")
             return None
 
         latest = chapters_data["chapters"][0]
@@ -180,7 +180,7 @@ class AddManhwaComick(commands.Cog):
 
     @app_commands.command(name="add_manhwa", description="Add a manhwa to your list using Comick API")
     async def add_manhwa(self, interaction: discord.Interaction, title: str):
-        print(f"[AddManhwaComick] add_manhwa called by {interaction.user} with title: {title}")
+        log.info(f"add_manhwa called by {interaction.user} with title: {title}")
         await interaction.response.defer()
 
         slug, top = await self.search_slug(title)
@@ -202,10 +202,9 @@ class AddManhwaComick(commands.Cog):
                     (interaction.user.id, top.get("title", title), slug, 0)
                 )
                 await db.commit()
-            print(f"[AddManhwaComick] Inserted {top.get('title', title)} for user {interaction.user.id}")
+            log.info(f"Inserted {top.get('title', title)} for user {interaction.user.id}")
         except Exception as e:
-            print(f"[AddManhwaComick] Database insert failed: {e}")
-            traceback.print_exc()
+            log.error(f"Database insert failed: {e}", exc_info=True)
             await interaction.followup.send("❌ Failed to save to database. Try again.")
             return
 
@@ -222,7 +221,7 @@ class AddManhwaComick(commands.Cog):
 
     @app_commands.command(name="remove_manhwa", description="Remove a manhwa from your list")
     async def remove_manhwa(self, interaction: discord.Interaction, title: str):
-        print(f"[AddManhwaComick] remove_manhwa called by {interaction.user} for: {title}")
+        log.info(f"remove_manhwa called by {interaction.user} for: {title}")
         await interaction.response.defer()
         try:
             async with aiosqlite.connect('manhwa.db') as db:
@@ -252,25 +251,24 @@ class AddManhwaComick(commands.Cog):
             else:
                 await interaction.followup.send(f"🗑️ Removed **{title}** from your list!")
         except Exception as e:
-            print(f"[AddManhwaComick] Database delete failed: {e}")
-            traceback.print_exc()
+            log.error(f"Database delete failed: {e}", exc_info=True)
             await interaction.followup.send("❌ Failed to remove. Try again.")
 
     # ============ BACKGROUND TASK ============
 
     async def _before_chapter_check(self):
         await self.bot.wait_until_ready()
-        print("[AddManhwaComick] Bot ready, chapter check task will start now")
+        log.info("Bot ready, chapter check task will start now")
 
     async def _chapter_check_loop(self):
-        print("[AddManhwaComick] Running chapter check...")
+        log.info("Running chapter check...")
         async with aiosqlite.connect('manhwa.db') as db:
             async with db.execute("SELECT user_id, manhwa_title, manhwa_slug, latest_chapter_notified FROM chapter_tracking") as cursor:
                 rows = await cursor.fetchall()
             try:
                 user_updates = {}
 
-                print(f"[AddManhwaComick] Checking {len(rows)} tracked manhwas")
+                log.info(f"Checking {len(rows)} tracked manhwas")
                 for user_id, manhwa_title, manhwa_slug, latest_notified in rows:
                     try:
                         latest_info = await self.get_latest_chapter(manhwa_title, manhwa_slug)
@@ -287,14 +285,13 @@ class AddManhwaComick(commands.Cog):
                             await db.execute(
                                 "UPDATE chapter_tracking SET latest_chapter_notified = ?, last_notified_time = CURRENT_TIMESTAMP WHERE user_id = ? AND manhwa_slug = ?",
                                 (latest_chapter_num, user_id, manhwa_slug)
-                                )
+                                ) 
                             await db.commit()
                     except Exception as e:
-                        print(f"[AddManhwaComick] Error checking {manhwa_title}: {e}")
-                        traceback.print_exc()
+                        log.error(f"Error checking {manhwa_title}: {e}", exc_info=True)
 
                 # Send DMs
-                print(f"[AddManhwaComick] Sending updates to {len(user_updates)} users")
+                log.info(f"Sending updates to {len(user_updates)} users")
                 for uid, updates in user_updates.items():
                     try:
                         user = await self.bot.fetch_user(uid)
@@ -317,16 +314,14 @@ class AddManhwaComick(commands.Cog):
                         embed.set_footer(text="Powered by Comick")
                         await user.send(embed=embed)
                         await asyncio.sleep(1)
-                        print(f"[AddManhwaComick] Sent {len(updates)} updates to {uid}")
+                        log.info(f"Sent {len(updates)} updates to {uid}")
                     except Exception as e:
-                        print(f"[AddManhwaComick] Failed to send DM to {uid}: {e}")
-                        traceback.print_exc()
+                        log.error(f"Failed to send DM to {uid}: {e}", exc_info=True)
             except Exception as e:
-                print(f"[AddManhwaComick] Chapter check failed: {e}")
-                traceback.print_exc()
+                log.error(f"Chapter check failed: {e}", exc_info=True)
 
 # setup function for load_extension
 async def setup(bot):
     cog = AddManhwaComick(bot)
     await bot.add_cog(cog)
-    print("[AddManhwaComick] Cog added")
+    log.info("Cog added")
