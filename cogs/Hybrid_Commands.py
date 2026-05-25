@@ -79,11 +79,15 @@ class ComickSlash(commands.Cog):
     async def search(self, ctx: commands.Context, title: str):
         if ctx.interaction:
             await ctx.interaction.response.defer()
-
         slug, top = await self.search_slug(title)
+        cover = top.get("cover_url") or top.get("cover")
+        
         if not slug:
             msg = f"❌ No results found for **{title}**."
-            await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
+            if ctx.interaction:
+                await ctx.interaction.followup.send(msg)
+            else:
+                await ctx.send(msg)
             return
 
         embed = discord.Embed(
@@ -93,8 +97,8 @@ class ComickSlash(commands.Cog):
             color=0x2b2d31
         )
 
-        if top.get("cover"):
-            embed.set_image(url=top["cover"])
+        if cover:
+            embed.set_image(url=cover)
 
         view = discord.ui.View()
         view.add_item(discord.ui.Button(
