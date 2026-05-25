@@ -18,7 +18,6 @@ log = logging.getLogger(__name__)
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
-DEV_MODE = True
 
 intents = discord.Intents.default()
 intents.message_content = True
