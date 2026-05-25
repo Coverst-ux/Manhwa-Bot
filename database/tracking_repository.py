@@ -65,7 +65,7 @@ class TrackingRepository:
                 return False
 
             async with db.execute(
-                "SELECT manhwa_slug FROM chapter_tracking WHERE user_id = ? AND manhwa_title = ?",
+                "SELECT manhwa_slug FROM chapter_tracking WHERE user_id = ? AND LOWER(manhwa_title)= LOWER(?)",
                 (user_id, title),
             ) as cursor:
                 slug_row = await cursor.fetchone()
