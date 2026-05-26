@@ -18,7 +18,8 @@ class TrackingRepository:
                         user_id INTEGER,
                         title TEXT NOT NULL,
                         cover TEXT,
-                        link TEXT NOT NULL
+                        link TEXT NOT NULL,
+                        UNIQUE(user_id, title)
                     )
                 """)
                 await db.execute("""
