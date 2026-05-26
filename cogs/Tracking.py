@@ -12,7 +12,7 @@ from services.comick_client import ComickClient
 log = logging.getLogger(__name__)
 
 
-class AddManhwaComick(commands.Cog):
+class TrackingCog(commands.Cog):
     TIMEOUT = aiohttp.ClientTimeout(total=10)
 
     def __init__(self, bot):
@@ -192,6 +192,6 @@ class AddManhwaComick(commands.Cog):
 
 
 async def setup(bot):
-    cog = AddManhwaComick(bot)
+    cog = TrackingCog(bot)
     await bot.add_cog(cog)
     log.info("Cog added")
