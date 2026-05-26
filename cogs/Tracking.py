@@ -68,7 +68,10 @@ class AddManhwaComick(commands.Cog):
         url = f"{self.comick.WEB_BASE}/comic/{slug}"
 
         try:
-            await self.repo.add_manhwa(interaction.user.id, saved_title, cover, url, slug)
+            inserted = await self.repo.add_manhwa(interaction.user.id, saved_title, cover, url, slug)
+            if not inserted:
+                await interaction.followup.send(f"**{saved_title}** is already in your list.")
+                return
             log.info("Inserted %s for user %s", saved_title, interaction.user.id)
         except Exception as e:
             log.error("Database insert failed: %s", e, exc_info=True)

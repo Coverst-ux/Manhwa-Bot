@@ -40,10 +40,11 @@ class TrackingRepository:
 
     async def add_manhwa(self, user_id: int, title: str, cover: str | None, link: str, slug: str):
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute(
-                "INSERT INTO manhwas (user_id, title, cover, link) VALUES (?, ?, ?, ?)",
-                (user_id, title, cover, link),
-            )
+            cursor = await db.execute(
+                    "INSERT OR IGNORE INTO manhwas (user_id, title, cover, link) VALUES (?, ?, ?, ?)",
+                    (user_id, title, cover, link),
+                )
+            inserted = cursor.rowcount > 0
             await db.execute(
                 """
                 INSERT OR IGNORE INTO chapter_tracking
@@ -52,7 +53,8 @@ class TrackingRepository:
                 """,
                 (user_id, title, slug, 0),
             )
-            await db.commit()
+            await db.commit()           
+            return inserted
 
     async def remove_manhwa(self, user_id: int, title: str) -> bool:
         async with aiosqlite.connect(self.db_path) as db:
