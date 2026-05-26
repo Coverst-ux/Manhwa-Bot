@@ -3,6 +3,7 @@
 [![Tests](https://github.com/Coverst-ux/Manhwa-Bot/actions/workflows/tests.yml/badge.svg)](https://github.com/Coverst-ux/Manhwa-Bot/actions/workflows/tests.yml)
 
 A Discord bot for searching, tracking, and receiving automatic chapter update notifications for manhwa and manga — built on the Comick API with a fully async Python backend.
+![Chapter notification preview](images/notification_preview.png)
 
 ## Features
 - **Search Manhwa** - Find any manhwa using `/search`
