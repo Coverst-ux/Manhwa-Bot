@@ -183,6 +183,8 @@ class AddManhwaComick(commands.Cog):
                     await user.send(embed=embed)
                     await asyncio.sleep(1)
                     log.info("Sent %d updates to %s", len(updates), uid)
+                except discord.Forbidden:
+                    log.warning("Cannot send DM to %s: DMs disabled", uid)
                 except Exception as e:
                     log.error("Failed to send DM to %s: %s", uid, e, exc_info=True)
         except Exception as e:
