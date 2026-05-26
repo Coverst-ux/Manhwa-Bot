@@ -57,7 +57,7 @@ class TrackingRepository:
     async def remove_manhwa(self, user_id: int, title: str) -> bool:
         async with aiosqlite.connect(self.db_path) as db:
             async with db.execute(
-                "SELECT link FROM manhwas WHERE title = ? AND user_id = ?",
+                "SELECT link FROM manhwas WHERE LOWER(title) = LOWER(?) AND user_id = ?",
                 (title, user_id),
             ) as cursor:
                 row = await cursor.fetchone()
@@ -73,7 +73,7 @@ class TrackingRepository:
                 slug = slug_row[0] if slug_row else None
 
             cursor = await db.execute(
-                "DELETE FROM manhwas WHERE title = ? AND user_id = ?",
+                "DELETE FROM manhwas WHERE LOWER(title) = LOWER(?) AND user_id = ?",
                 (title, user_id),
             )
             rows_deleted = cursor.rowcount
@@ -108,3 +108,11 @@ class TrackingRepository:
                 (chapter, user_id, slug),
             )
             await db.commit()
+
+    async def get_user_manhwas(self, user_id: int):
+        async with aiosqlite.connect(self.db_path) as db:
+            async with db.execute(
+                "SELECT title, link FROM manhwas WHERE user_id = ?",
+                (user_id,)
+            ) as cursor:
+                return await cursor.fetchall()

@@ -102,6 +102,35 @@ class AddManhwaComick(commands.Cog):
             await interaction.followup.send(f"**{title}** not found in your list.")
         else:
             await interaction.followup.send(f"Removed **{title}** from your list.")
+            
+    @app_commands.command(name="list_manhwa", description="List your saved manhwas")
+    async def list_manhwas(self, interaction: discord.Interaction):
+        log.info("list_manhwa called by %s", interaction.user)
+        await interaction.response.defer()
+        
+        try:
+           rows = await self.repo.get_user_manhwas(interaction.user.id)
+        except Exception as e:
+            log.error("Failed to fetch manhwa for %s: %s.", interaction.user.id, e, exc_info=True)
+            await interaction.followup.send("Failed to fetch your list. Try again")
+            return
+        
+        if not rows:
+            await interaction.followup.send("Your list is empty. Use `/add_manhwa` to start tracking.")
+            return
+
+        description = "\n".join(f"[{title}]({link})" for title, link in rows)
+        
+        embed= discord.Embed(
+            title="Your Manhwa List",
+            description=description,
+            color=0x2b2d31
+        )
+        embed.set_footer(text=f"{len(rows)} manhwa(s) tracked")
+        await interaction.followup.send(embed=embed)        
+        
+        
+        
 
     async def _before_chapter_check(self):
         await self.bot.wait_until_ready()
