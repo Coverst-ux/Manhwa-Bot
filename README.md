@@ -1,4 +1,4 @@
-# Manhwa Bot
+# Novel-Tracker Bot
 
 [![Tests](https://github.com/Coverst-ux/Manhwa-Bot/actions/workflows/tests.yml/badge.svg)](https://github.com/Coverst-ux/Manhwa-Bot/actions/workflows/tests.yml)
 
