@@ -1,6 +1,6 @@
 import pytest
 
-from cogs.Tracking import AddManhwaComick
+from cogs.Tracking import TrackingCog
 
 
 @pytest.mark.parametrize("chapter, expected", [
@@ -12,8 +12,8 @@ from cogs.Tracking import AddManhwaComick
     ("12.5", "12.5"),
 ])
 def test_format_chapter_number(chapter, expected):
-    assert AddManhwaComick.format_chapter_number(chapter) == expected
+    assert TrackingCog.format_chapter_number(chapter) == expected
 
 
 def test_format_chapter_number_handles_none_without_crashing():
-    assert AddManhwaComick.format_chapter_number(None) == "None"
+    assert TrackingCog.format_chapter_number(None) == "None"
