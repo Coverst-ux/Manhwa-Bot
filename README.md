@@ -78,9 +78,9 @@ python main.py
 - ✅ Manual update check with slug resolution fallback
 - ✅ Structured logging across all modules
 - ✅ Local SQLite storage with proper schema constraints
+- ✅ pytest test suite
 
 **Planned:**
-- 🔄 pytest test suite
 - 🔄 Web dashboard for tracking
 
 ## Permissions Required
