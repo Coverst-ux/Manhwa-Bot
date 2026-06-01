@@ -95,3 +95,7 @@ class ComickClient:
                     await asyncio.sleep(1)
                     continue
                 return None
+
+    async def get_details(self, slug: str):
+        url = f"{self.BASE_URL}/comic/{slug}"
+        return await self._fetch_json(url, params={"tachiyomi": "true"})

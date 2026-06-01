@@ -3,6 +3,8 @@ from discord.ext import commands
 import aiohttp
 import asyncio
 import logging
+from database.tracking_repository import TrackingRepository
+from services.comick_client import ComickClient
 
 log = logging.getLogger(__name__)
 
@@ -11,49 +13,10 @@ class ComickSlash(commands.Cog):
     WEB_BASE = "https://comick.dev"
     TIMEOUT = aiohttp.ClientTimeout(total=10)
 
-    def __init__(self, bot):
+    def __init__(self, bot, comick: ComickClient):
         self.bot = bot
-        self.session = None
-
-    async def cog_load(self):
-        self.session = aiohttp.ClientSession(timeout=self.TIMEOUT)
-        log.info("Session created")
-
-    async def cog_unload(self):
-        if self.session:
-            await self.session.close()
-            log.info("Session closed")
-
+        self.comick = comick
     # ---------------- Utility ----------------
-    async def fetch_json(self, url, params=None):
-        if not self.session:
-            return None
-        try:
-            async with self.session.get(url, params=params) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                log.warning("HTTP %d for %s", resp.status, url)
-        except Exception as e:
-            log.error("Fetch error for %s: %s", url, e)
-        return None
-
-    async def search_slug(self, title: str):
-        if not title or not title.strip():
-            return None, None
-
-        search_url = f"{self.BASE_URL}/v1.0/search"
-        data = await self.fetch_json(
-            search_url,
-            params={"q": title, "tachiyomi": "true"}
-        )
-
-        if not data:
-            log.warning("No results for: %s", title)
-            return None, None
-
-        top = data[0]
-        return top.get("slug"), top
-
     async def send_embed(self, ctx_or_interaction, embed, view=None):
         try:
             if isinstance(ctx_or_interaction, commands.Context):
@@ -79,9 +42,8 @@ class ComickSlash(commands.Cog):
     async def search(self, ctx: commands.Context, title: str):
         if ctx.interaction:
             await ctx.interaction.response.defer()
-        slug, top = await self.search_slug(title)
-        cover = top.get("cover_url") or top.get("cover")
-        
+        slug, top = await self.comick.search_slug(title)
+
         if not slug:
             msg = f"❌ No results found for **{title}**."
             if ctx.interaction:
@@ -89,7 +51,9 @@ class ComickSlash(commands.Cog):
             else:
                 await ctx.send(msg)
             return
-
+        
+        cover = top.get("cover_url") or top.get("cover")
+        
         embed = discord.Embed(
             title=top.get("title", "Unknown"),
             description=(top.get("desc") or "No description.")[:300],
@@ -114,13 +78,13 @@ class ComickSlash(commands.Cog):
         if ctx.interaction:
             await ctx.interaction.response.defer()
 
-        slug, _ = await self.search_slug(title)
+        slug, _ = await self.comick.search_slug(title)
         if not slug:
             msg = f"❌ No results found for **{title}**."
             await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
             return
 
-        data = await self.fetch_json(f"{self.BASE_URL}/comic/{slug}")
+        data = await self.comick.get_details(slug)
         if not data:
             msg = "⚠️ No details found."
             await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
@@ -129,7 +93,7 @@ class ComickSlash(commands.Cog):
         embed = discord.Embed(
             title=data.get("title", "Unknown"),
             description=(data.get("desc") or "No description.")[:4000],
-            url=f"{self.WEB_BASE}/comic/{slug}",
+            url=f"{self.comick.WEB_BASE}/comic/{slug}",
             color=0x1abc9c
         )
 
@@ -139,7 +103,7 @@ class ComickSlash(commands.Cog):
         view = discord.ui.View()
         view.add_item(discord.ui.Button(
             label="📖 Read on Comick",
-            url=f"{self.WEB_BASE}/comic/{slug}"
+            url=f"{self.comick.WEB_BASE}/comic/{slug}"
         ))
 
         await self.send_embed(ctx, embed, view)
@@ -153,38 +117,22 @@ class ComickSlash(commands.Cog):
         if ctx.interaction:
             await ctx.interaction.response.defer()
 
-        slug, _ = await self.search_slug(title)
+        slug, _ = await self.comick.search_slug(title)
         if not slug:
             msg = f"❌ No results found for **{title}**."
             await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
             return
 
-        comic = await self.fetch_json(f"{self.BASE_URL}/v1.0/comic/{slug}")
-        if not comic or not comic.get("hid"):
-            msg = "⚠️ Comic ID not found."
-            await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
-            return
+        latest = await self.comick.get_latest_chapter(title, slug)
 
-        chapters = await self.fetch_json(
-            f"{self.BASE_URL}/v1.0/comic/{comic['hid']}/chapters",
-            params={"limit": 1, "tachiyomi": "true"}
-        )
-
-        if not chapters:
+        if not latest:
             msg = "⚠️ Could not fetch chapters."
             await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
             return
 
-        data = chapters.get("chapters") or chapters.get("data") or []
-        if not data:
-            msg = "⚠️ No chapters found."
-            await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
-            return
-
-        ch = data[0]
-        chapter_url = ch.get("url")
+        chapter_url = latest["link"]
         embed = discord.Embed(
-            title=ch.get("title", "Latest Chapter"),
+            title=latest.get("title", "Latest Chapter"),
             description=f"[Read here]({chapter_url})" if chapter_url else "No link available",
             color=0xe67e22
         )
@@ -200,5 +148,6 @@ class ComickSlash(commands.Cog):
 
 # ---------------- Setup ----------------
 async def setup(bot):
-    await bot.add_cog(ComickSlash(bot))
+    tracking_cog = bot.cogs.get("TrackingCog")
+    await bot.add_cog(ComickSlash(bot, tracking_cog.comick))
     log.info("Cog added")

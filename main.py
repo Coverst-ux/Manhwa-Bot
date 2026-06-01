@@ -29,8 +29,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ------------------------
 initial_extensions = [
     "cogs.Owner_Commands",
-    "cogs.Hybrid_Commands",
     "cogs.Tracking",
+    "cogs.Hybrid_Commands",
     "cogs.Manual_Check"
 ]
 
