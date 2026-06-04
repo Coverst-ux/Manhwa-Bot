@@ -16,6 +16,7 @@ class ComickSlash(commands.Cog):
     def __init__(self, bot, comick: ComickClient):
         self.bot = bot
         self.comick = comick
+        log.info("Cog initialized")
     # ---------------- Utility ----------------
     async def send_embed(self, ctx_or_interaction, embed, view=None):
         try:
@@ -117,7 +118,7 @@ class ComickSlash(commands.Cog):
         if ctx.interaction:
             await ctx.interaction.response.defer()
 
-        slug, _ = await self.comick.search_slug(title)
+        slug, top = await self.comick.search_slug(title)
         if not slug:
             msg = f"❌ No results found for **{title}**."
             await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
@@ -129,20 +130,24 @@ class ComickSlash(commands.Cog):
             msg = "⚠️ Could not fetch chapters."
             await (ctx.interaction.followup.send(msg) if ctx.interaction else ctx.send(msg))
             return
+        
+        cover = top.get("cover_url") or top.get("cover")
 
         chapter_url = latest["link"]
         embed = discord.Embed(
-            title=latest.get("title", "Latest Chapter"),
+            title=f"Latest Chapter — {latest['title']}",
             description=f"[Read here]({chapter_url})" if chapter_url else "No link available",
             color=0xe67e22
         )
-
+        if cover:
+            embed.set_image(url=cover)
+            
         view = discord.ui.View()
         if chapter_url:
             view.add_item(discord.ui.Button(
                 label="📖 Read Chapter",
                 url=chapter_url
-            ))
+         ))
 
         await self.send_embed(ctx, embed, view)
 
